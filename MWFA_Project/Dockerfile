@@ -9,15 +9,14 @@ RUN apt-get install -y nodejs
 # 3. تحديد مجلد العمل داخل الحاوية
 WORKDIR /app
 
-# 4. نسخ ملفات التعريف من مجلد الباكند
-# (هنا تأكدنا أنه راح يقرا من مجلد backend الصحيح)
-COPY backend/package*.json ./
+# 4. نسخ ملفات التعريف من نفس المجلد
+COPY package*.json ./
 
-# 5. التعديل السحري: استخدام npm install العادي بدلاً من npm ci الصارم
+# 5. التثبيت المرن
 RUN npm install
 
-# 6. نسخ باقي كود الباكند (mcpService.js, server.js, إلخ)
-COPY backend/ ./
+# 6. نسخ باقي كود الباكند (mcpService.js, server.js)
+COPY . .
 
 # 7. فتح بورت الباكند
 EXPOSE 3000
