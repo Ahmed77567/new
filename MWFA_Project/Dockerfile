@@ -6,20 +6,20 @@ RUN apt-get update && apt-get install -y curl
 RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash -
 RUN apt-get install -y nodejs
 
-# 3. تحديد مجلد العمل داخل الحاوية
+# 3. تحديد مجلد العمل الرئيسي
 WORKDIR /app
 
-# 4. نسخ ملفات التعريف حصراً من مجلد الباكند
-COPY backend/package*.json ./
+# 4. نسخ كل محتويات المشروع (بما فيها مجلد backend)
+COPY . .
 
-# 5. التثبيت المرن
+# 5. الدخول لمجلد الباكند حصراً
+WORKDIR /app/backend
+
+# 6. تثبيت المكاتب (هنا package.json صار كدامه مباشرة)
 RUN npm install
-
-# 6. نسخ باقي ملفات الباكند (مثل server.js)
-COPY backend/ ./
 
 # 7. فتح بورت الباكند
 EXPOSE 3000
 
-# 8. تشغيل الباكند
+# 8. تشغيل السيرفر
 CMD ["node", "server.js"]
