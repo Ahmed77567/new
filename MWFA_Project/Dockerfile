@@ -1,33 +1,26 @@
-################################################################
-# MWFA Backend — Dockerfile
-# Multi-stage build: Builder → Production
-################################################################
+# 1. الصورة الأساسية اللي بيها أدوات كالي
+FROM cyberillo/kali-mcp-server:latest
 
-# ── Stage 1: Builder ─────────────────────────────────────────
-FROM node:20-alpine AS builder
+# 2. تثبيت بيئة Node.js داخل الكالي
+RUN apt-get update && apt-get install -y curl
+RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash -
+RUN apt-get install -y nodejs
 
+# 3. تحديد مجلد العمل داخل الحاوية
 WORKDIR /app
 
-# نسخ ملفات الـ dependencies أولاً (لتسريع الـ cache)
+# 4. نسخ ملفات التعريف من مجلد الباكند
+# (هنا تأكدنا أنه راح يقرا من مجلد backend الصحيح)
 COPY backend/package*.json ./
-RUN npm ci --only=production
 
-# نسخ كامل الـ source
-COPY backend/ .
+# 5. التعديل السحري: استخدام npm install العادي بدلاً من npm ci الصارم
+RUN npm install
 
-# توليد Prisma Client
-RUN npx prisma generate
+# 6. نسخ باقي كود الباكند (mcpService.js, server.js, إلخ)
+COPY backend/ ./
 
-# ── Stage 2: Production ──────────────────────────────────────
-FROM node:20-alpine AS production
+# 7. فتح بورت الباكند
+EXPOSE 3000
 
-WORKDIR /app
-
-# نسخ من الـ builder
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app .
-
-# تشغيل الـ migrations ثم الـ server
-CMD ["sh", "-c", "npx prisma db push --skip-generate && node server.js"]
-
-EXPOSE 3001
+# 8. تشغيل الباكند مالتك
+CMD ["node", "server.js"]
