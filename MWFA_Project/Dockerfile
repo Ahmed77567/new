@@ -9,17 +9,14 @@ RUN apt-get install -y nodejs
 # 3. تحديد مجلد العمل داخل الحاوية
 WORKDIR /app
 
-# 4. نسخ ملفات التعريف من نفس المجلد
-COPY package*.json ./
+# 4. ننسخ كل محتويات مجلد الباكند مباشرة لداخل الحاوية
+COPY backend/ ./
 
 # 5. التثبيت المرن
 RUN npm install
 
-# 6. نسخ باقي كود الباكند (mcpService.js, server.js)
-COPY . .
-
-# 7. فتح بورت الباكند
+# 6. فتح بورت الباكند
 EXPOSE 3000
 
-# 8. تشغيل الباكند مالتك
+# 7. تشغيل الباكند
 CMD ["node", "server.js"]
