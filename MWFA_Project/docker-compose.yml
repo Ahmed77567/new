@@ -1,0 +1,77 @@
+################################################################
+# MWFA — Docker Compose Stack
+#
+# Services:
+#   mosquitto  — MQTT Broker (Port 1883)
+#   web-app    — MWFA Middleware (Port 3001)
+#   kali-mcp   — AI Security Engine (Port 8000)
+################################################################
+
+version: '3.9'
+
+networks:
+  mwfa-net:
+    driver: bridge
+
+volumes:
+  mosquitto-data:
+  mosquitto-log:
+  mwfa-db:
+
+services:
+
+  # ── Mosquitto MQTT Broker ─────────────────────────────────
+  mosquitto:
+    image: eclipse-mosquitto:2.0
+    container_name: mwfa-mosquitto
+    restart: unless-stopped
+    networks:
+      - mwfa-net
+    ports:
+      - "1883:1883"          # MQTT
+      - "9001:9001"          # MQTT over WebSockets (للـ Dashboard)
+    volumes:
+      - ./mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - mosquitto-data:/mosquitto/data
+      - mosquitto-log:/mosquitto/log
+    healthcheck:
+      test: ["CMD", "mosquitto_pub", "-t", "health", "-m", "ping", "-q"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ── MWFA Web App / Middleware ─────────────────────────────
+  web-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mwfa-backend
+    restart: unless-stopped
+    networks:
+      - mwfa-net
+    ports:
+      - "3001:3001"
+    environment:
+      - DATABASE_URL=file:/data/mwfa.db
+      - PORT=3001
+      - MQTT_HOST=mosquitto          # اسم الـ service داخل docker network
+      - MQTT_PORT=1883
+      - MQTT_USERNAME=${MQTT_USERNAME:-}
+      - MQTT_PASSWORD=${MQTT_PASSWORD:-}
+      - MCP_URL=https://kali-mcp-server-production-8297.up.railway.app
+      - MCP_TIMEOUT=60000
+    volumes:
+      - mwfa-db:/data                # قاعدة البيانات SQLite خارج الـ container
+    depends_on:
+      mosquitto:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3001/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # ── Kali-MCP (Railway Cloud) ──────────────────────────────
+  # Kali-MCP يعمل على Railway Production — لا نحتاج container محلي
+  # URL: https://kali-mcp-server-production-8297.up.railway.app
+  # web-app يتواصل معه مباشرة عبر HTTPS
